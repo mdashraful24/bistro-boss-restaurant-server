@@ -2,13 +2,44 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+const formData = require('form-data');
+const Mailgun = require('mailgun.js');
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({
+    username: 'api',
+    key: process.env.MAIL_GUN_API_KEY,
+});
+
+
+
 const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
 app.use(cors());
 app.use(express.json());
+
+
+
+// sslcommerz
+// Store ID: bistr679643a424c3d
+// Store Password(API / Secret Key): bistr679643a424c3d @ssl
+
+
+// Merchant Panel URL: https://sandbox.sslcommerz.com/manage/ (Credential as you inputted in the time of registration)
+
+
+
+// Store name: testbistrg31d
+// Registered URL: www.bistrobossrestaurant.com
+// Session API to generate transaction: https://sandbox.sslcommerz.com/gwprocess/v3/api.php
+// Validation API: https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php?wsdl
+// Validation API(Web Service) name: https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php
+
+// You may check our plugins available for multiple carts and libraries: https://github.com/sslcommerz
+
 
 
 
@@ -237,7 +268,34 @@ async function run() {
             };
 
             const deleteResult = await cartCollection.deleteMany(query);
+
+            // send user email about payment confirmation
+
+            mg.messages.create(process.env.MAIL_SENDING_DOMAIN, {
+                from: "Mailgun Sandbox <postmaster@sandboxbc325deabfb04a719c568570473caf6c.mailgun.org>",
+                to: ["mdashrafulislam2882@gmail.com"],
+                subject: "Bistro Boss Order Confirmation",
+                text: "Testing some Mailgun awesomness!",
+                html: `
+                <div>
+                    <h2>Thank you for your order!</h2>
+                    <h4>Your Transaction Id: 
+                        <strong>${payment.transactionId}</strong>
+                    </h4>
+                    <p>We would like to get your feedback about the food</p>
+                <div/>
+                `
+            })
+                .then(msg => console.log(msg)) // logs response data
+                .catch(err => console.error(err)); // logs any error
+
+
             res.send({ paymentResult, deleteResult });
+        })
+
+        app.post('/create-ssl-payment', async (req, res) => {
+            const payment = req.body;
+            console.log("payment info", payment);
         })
 
         // Stats or analytics
@@ -311,8 +369,8 @@ async function run() {
 
 
         // Send a ping to confirm a successful connection
-        // await client.db("admin").command({ ping: 1 });
-        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        await client.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
